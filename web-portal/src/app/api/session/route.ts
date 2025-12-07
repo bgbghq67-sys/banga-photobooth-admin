@@ -38,6 +38,8 @@ export async function POST(request: Request) {
         let label = key;
 
         if (key === "zip" || file.name.endsWith(".zip")) {
+          // Skip zip upload if needed, but if sent, process it.
+          // If client stops sending zip, this block won't be entered.
           type = "zip";
           label = "Session Archive";
         } else if (key.includes("ai") || file.name.includes("ai")) {
