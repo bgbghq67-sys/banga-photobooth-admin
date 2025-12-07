@@ -26,7 +26,7 @@ export default function ControlCenterPage() {
         // Initialize session amounts
         const amounts: { [key: string]: number } = {};
         data.devices.forEach((d: Device) => {
-          amounts[d.id] = 10;
+          amounts[d.id] = 1;
         });
         setSessionAmounts(amounts);
       }
@@ -47,7 +47,7 @@ export default function ControlCenterPage() {
   const adjustAmount = (deviceId: string, delta: number) => {
     setSessionAmounts((prev) => ({
       ...prev,
-      [deviceId]: Math.max(1, (prev[deviceId] || 10) + delta),
+      [deviceId]: Math.max(1, (prev[deviceId] || 1) + delta),
     }));
   };
 
@@ -200,7 +200,7 @@ export default function ControlCenterPage() {
                     <div className="text-sm text-slate-400 text-center mb-3">Add Sessions</div>
                     <div className="flex items-center justify-center gap-4">
                       <button
-                        onClick={() => adjustAmount(device.id, -10)}
+                        onClick={() => adjustAmount(device.id, -1)}
                         className="w-12 h-12 rounded-full bg-white border border-slate-200 text-slate-600 text-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center shadow-sm"
                       >
                         -
@@ -209,7 +209,7 @@ export default function ControlCenterPage() {
                         {amount}
                       </div>
                       <button
-                        onClick={() => adjustAmount(device.id, 10)}
+                        onClick={() => adjustAmount(device.id, 1)}
                         className="w-12 h-12 rounded-full bg-white border border-slate-200 text-slate-600 text-xl font-bold hover:bg-slate-100 transition-colors flex items-center justify-center shadow-sm"
                       >
                         +
