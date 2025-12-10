@@ -4,3 +4,4 @@ export default function DashboardPage() {
   redirect("/dashboard/devices");
 }
 
+
