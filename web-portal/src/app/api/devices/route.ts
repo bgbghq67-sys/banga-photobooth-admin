@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, addDoc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const DEVICES_COLLECTION = "devices";
@@ -8,18 +8,20 @@ const DEVICES_COLLECTION = "devices";
 export async function GET() {
   try {
     const devicesRef = collection(db, DEVICES_COLLECTION);
-    const q = query(devicesRef, orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(devicesRef);
 
     const devices = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
 
+    // Sort client-side to avoid index requirement
+    devices.sort((a, b) => ((b as any).createdAt || 0) - ((a as any).createdAt || 0));
+
     return NextResponse.json({ ok: true, devices });
   } catch (error) {
     console.error("Error fetching devices:", error);
-    return NextResponse.json({ ok: false, message: "Failed to fetch devices" }, { status: 500 });
+    return NextResponse.json({ ok: false, message: "Failed to fetch devices", error: String(error) }, { status: 500 });
   }
 }
 
