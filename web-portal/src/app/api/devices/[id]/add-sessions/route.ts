@@ -8,7 +8,12 @@ export const dynamic = "force-dynamic";
 
 // GET - Health check
 export async function GET() {
-  return NextResponse.json({ ok: true, message: "Add-sessions endpoint is alive" });
+  return NextResponse.json({
+    ok: true,
+    message: "Add-sessions endpoint is alive",
+    firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+    vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+  });
 }
 
 // POST - Add sessions to device
@@ -44,6 +49,7 @@ export async function POST(
       message: `Added ${sessions} sessions`,
       newTotal: updatedData?.remainingSessions,
       firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+      vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
     });
   } catch (error) {
     const errorText =
@@ -59,6 +65,7 @@ export async function POST(
         message: "Failed to add sessions",
         error: errorText,
         firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+        vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
       },
       { status: 500 }
     );
