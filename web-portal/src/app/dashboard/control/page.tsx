@@ -75,11 +75,24 @@ export default function ControlCenterPage() {
 
       clearTimeout(timeoutId);
 
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        // ignore
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        alert(
+          `HTTP ${res.status}` +
+            (data?.message ? `\nMessage: ${data.message}` : "") +
+            (data?.debugId ? `\nDebugId: ${data.debugId}` : "") +
+            (data?.stage ? `\nStage: ${data.stage}` : "") +
+            (data?.error ? `\nError: ${data.error}` : "")
+        );
+        return;
+      }
+
       if (data.ok) {
         await fetchDevices(); // Wait for refresh to complete
       } else {
@@ -87,6 +100,7 @@ export default function ControlCenterPage() {
           "Failed: " +
             (data.message || "Unknown error") +
             (data.debugId ? `\nDebugId: ${data.debugId}` : "") +
+            (data.stage ? `\nStage: ${data.stage}` : "") +
             (data.error ? `\nError: ${data.error}` : "")
         );
       }

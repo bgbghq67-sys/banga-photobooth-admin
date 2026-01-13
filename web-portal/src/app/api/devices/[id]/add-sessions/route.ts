@@ -7,6 +7,22 @@ const DEVICES_COLLECTION = "devices";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`Timeout after ${ms}ms at ${label}`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
 // GET - Health check
 export async function GET() {
   return NextResponse.json({
@@ -24,10 +40,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const debugId = crypto.randomUUID();
+  const start = Date.now();
+  let stage = "start";
   try {
+    stage = "init-admin";
     const adminDb = getAdminDb();
+
+    stage = "read-params";
     const { id } = await params;
-    const body = await request.json();
+
+    stage = "parse-json";
+    const body = await withTimeout(request.json(), 5000, "request.json()");
     const { sessions } = body;
 
     console.log(`[add-sessions] ${debugId} device=${id} sessions=${sessions}`);
@@ -39,19 +62,26 @@ export async function POST(
       );
     }
 
+    stage = "get-doc";
     const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
-    const snapshot = await docRef.get();
+    const snapshot = await withTimeout(docRef.get(), 8000, "docRef.get()");
 
     if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found", debugId }, { status: 404 });
     }
 
-    await docRef.update({
-      remainingSessions: FieldValue.increment(sessions),
-      lastSeen: Date.now(),
-    } as any);
+    stage = "update-doc";
+    await withTimeout(
+      docRef.update({
+        remainingSessions: FieldValue.increment(sessions),
+        lastSeen: Date.now(),
+      } as any),
+      8000,
+      "docRef.update()"
+    );
 
-    const updatedSnapshot = await docRef.get();
+    stage = "get-updated-doc";
+    const updatedSnapshot = await withTimeout(docRef.get(), 8000, "docRef.get() after update");
     const updatedData = updatedSnapshot.data();
 
     return NextResponse.json({
@@ -61,6 +91,7 @@ export async function POST(
       firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
       vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
       debugId,
+      elapsedMs: Date.now() - start,
     });
   } catch (error) {
     const errorText =
@@ -76,6 +107,8 @@ export async function POST(
         message: "Failed to add sessions",
         error: errorText,
         stack: error instanceof Error ? error.stack ?? "" : "",
+        stage,
+        elapsedMs: Date.now() - start,
         firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
         vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
         hasServiceAccount: getAdminInfo().hasServiceAccount,
