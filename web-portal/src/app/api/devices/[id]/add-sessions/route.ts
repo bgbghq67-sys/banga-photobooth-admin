@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 const DEVICES_COLLECTION = "devices";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 // GET - Health check
 export async function GET() {
