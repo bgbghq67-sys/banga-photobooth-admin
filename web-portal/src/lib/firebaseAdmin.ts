@@ -20,6 +20,25 @@ function parseServiceAccountJson() {
   }
 }
 
+export function getAdminInfo() {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  let projectId = "";
+  let hasServiceAccount = false;
+  if (raw) {
+    hasServiceAccount = true;
+    try {
+      const parsed = JSON.parse(raw);
+      projectId = String(parsed?.project_id ?? "");
+    } catch {
+      // ignore
+    }
+  }
+  return {
+    hasServiceAccount,
+    serviceAccountProjectId: projectId,
+  };
+}
+
 export function getAdminDb() {
   const serviceAccount = parseServiceAccountJson();
   if (!serviceAccount) {

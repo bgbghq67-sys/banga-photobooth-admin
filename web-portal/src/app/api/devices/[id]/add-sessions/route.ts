@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb, getAdminInfo } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
 
@@ -14,6 +14,7 @@ export async function GET() {
     message: "Add-sessions endpoint is alive",
     firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
     vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+    hasServiceAccount: getAdminInfo().hasServiceAccount,
   });
 }
 
@@ -22,21 +23,27 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const debugId = crypto.randomUUID();
   try {
     const adminDb = getAdminDb();
     const { id } = await params;
     const body = await request.json();
     const { sessions } = body;
 
+    console.log(`[add-sessions] ${debugId} device=${id} sessions=${sessions}`);
+
     if (typeof sessions !== "number" || !Number.isFinite(sessions) || sessions < 1) {
-      return NextResponse.json({ ok: false, message: "Invalid session count" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, message: "Invalid session count", debugId },
+        { status: 400 }
+      );
     }
 
     const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
     const snapshot = await docRef.get();
 
     if (!snapshot.exists) {
-      return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
+      return NextResponse.json({ ok: false, message: "Device not found", debugId }, { status: 404 });
     }
 
     await docRef.update({
@@ -53,6 +60,7 @@ export async function POST(
       newTotal: updatedData?.remainingSessions,
       firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
       vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+      debugId,
     });
   } catch (error) {
     const errorText =
@@ -61,14 +69,18 @@ export async function POST(
         : typeof error === "string"
           ? error
           : JSON.stringify(error);
-    console.error("[add-sessions] Error adding sessions:", error);
+    console.error(`[add-sessions] ${debugId} Error adding sessions:`, error);
     return NextResponse.json(
       {
         ok: false,
         message: "Failed to add sessions",
         error: errorText,
+        stack: error instanceof Error ? error.stack ?? "" : "",
         firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
         vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+        hasServiceAccount: getAdminInfo().hasServiceAccount,
+        serviceAccountProjectId: getAdminInfo().serviceAccountProjectId,
+        debugId,
       },
       { status: 500 }
     );

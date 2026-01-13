@@ -83,7 +83,12 @@ export default function ControlCenterPage() {
       if (data.ok) {
         await fetchDevices(); // Wait for refresh to complete
       } else {
-        alert("Failed: " + (data.message || "Unknown error"));
+        alert(
+          "Failed: " +
+            (data.message || "Unknown error") +
+            (data.debugId ? `\nDebugId: ${data.debugId}` : "") +
+            (data.error ? `\nError: ${data.error}` : "")
+        );
       }
     } catch (e: unknown) {
       if (e instanceof Error && e.name === 'AbortError') {
