@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
-import { getAdminDb, getAdminInfo } from "@/lib/firebaseAdmin";
+import { FieldValue } from "@google-cloud/firestore";
+import { getServerDb, getServerInfo } from "@/lib/firestoreServer";
 
 const DEVICES_COLLECTION = "devices";
 
@@ -30,7 +30,7 @@ export async function GET() {
     message: "Add-sessions endpoint is alive",
     firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
     vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-    hasServiceAccount: getAdminInfo().hasServiceAccount,
+    hasServiceAccount: getServerInfo().hasServiceAccount,
   });
 }
 
@@ -43,8 +43,8 @@ export async function POST(
   const start = Date.now();
   let stage = "start";
   try {
-    stage = "init-admin";
-    const adminDb = getAdminDb();
+    stage = "init-db";
+    const db = getServerDb();
 
     stage = "read-params";
     const { id } = await params;
@@ -63,7 +63,7 @@ export async function POST(
     }
 
     stage = "get-doc";
-    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const docRef = db.collection(DEVICES_COLLECTION).doc(id);
     const snapshot = await withTimeout(docRef.get(), 8000, "docRef.get()");
 
     if (!snapshot.exists) {
@@ -75,7 +75,7 @@ export async function POST(
       docRef.update({
         remainingSessions: FieldValue.increment(sessions),
         lastSeen: Date.now(),
-      } as any),
+      }),
       8000,
       "docRef.update()"
     );
@@ -111,8 +111,8 @@ export async function POST(
         elapsedMs: Date.now() - start,
         firebaseProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
         vercelCommitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-        hasServiceAccount: getAdminInfo().hasServiceAccount,
-        serviceAccountProjectId: getAdminInfo().serviceAccountProjectId,
+        hasServiceAccount: getServerInfo().hasServiceAccount,
+        serviceAccountProjectId: getServerInfo().serviceAccountProjectId,
         debugId,
       },
       { status: 500 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebaseAdmin";
+import { getServerDb } from "@/lib/firestoreServer";
 
 const DEVICES_COLLECTION = "devices";
 
@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 // GET - List all devices
 export async function GET() {
   try {
-    const adminDb = getAdminDb();
-    const snapshot = await adminDb.collection(DEVICES_COLLECTION).get();
+    const db = getServerDb();
+    const snapshot = await db.collection(DEVICES_COLLECTION).get();
     const devices = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     // Sort client-side to avoid index requirement
@@ -25,7 +25,7 @@ export async function GET() {
 // POST - Create new device
 export async function POST(request: Request) {
   try {
-    const adminDb = getAdminDb();
+    const db = getServerDb();
     const body = await request.json();
     const { name, remainingSessions = 100 } = body;
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       lastSeen: null,
     };
 
-    const docRef = await adminDb.collection(DEVICES_COLLECTION).add(newDevice);
+    const docRef = await db.collection(DEVICES_COLLECTION).add(newDevice);
 
     return NextResponse.json({
       ok: true,

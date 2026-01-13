@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAdminInfo, getAdminDb } from "@/lib/firebaseAdmin";
+import { getServerDb, getServerInfo } from "@/lib/firestoreServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,15 +7,15 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const debugId = crypto.randomUUID();
   try {
-    const info = getAdminInfo();
+    const info = getServerInfo();
     const publicProjectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "";
     const vercelCommitSha = process.env.VERCEL_GIT_COMMIT_SHA ?? "";
 
     // If service account exists, also prove we can read devices collection (count only).
     let devicesCount: number | null = null;
     if (info.hasServiceAccount) {
-      const db = getAdminDb();
-      const snap = await db.collection("devices").select().get();
+      const db = getServerDb();
+      const snap = await db.collection("devices").get();
       devicesCount = snap.size;
     }
 
@@ -46,7 +46,7 @@ export async function GET() {
         error: err,
         firebase: {
           publicProjectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
-          ...getAdminInfo(),
+          ...getServerInfo(),
         },
         vercel: {
           commitSha: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
