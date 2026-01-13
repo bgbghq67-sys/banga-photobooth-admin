@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
+
+export const runtime = "nodejs";
 
 // POST - Reset machine binding for device
 export async function POST(
@@ -10,15 +11,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminDb = getAdminDb();
     const { id } = await params;
-    const docRef = doc(db, DEVICES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
+    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const snapshot = await docRef.get();
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
     }
 
-    await updateDoc(docRef, {
+    await docRef.update({
       machineId: null,
       activated: false,
       lastSeen: null,

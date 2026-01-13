@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, addDoc, query, where, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
+
+export const runtime = "nodejs";
 
 // GET - Health check for keep-alive pings
 export async function GET() {
@@ -12,6 +13,7 @@ export async function GET() {
 // POST - Register device (called by Desktop App on startup)
 export async function POST(request: Request) {
   try {
+    const adminDb = getAdminDb();
     const body = await request.json();
     const { machineId, machineName } = body;
 
@@ -20,18 +22,17 @@ export async function POST(request: Request) {
     }
 
     // Check if device already exists
-    const devicesRef = collection(db, DEVICES_COLLECTION);
-    const q = query(devicesRef, where("machineId", "==", machineId));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(DEVICES_COLLECTION)
+      .where("machineId", "==", machineId)
+      .limit(1)
+      .get();
 
     if (!snapshot.empty) {
-      // Device exists - update lastSeen and return info
       const deviceDoc = snapshot.docs[0];
       const deviceData = deviceDoc.data();
 
-      await updateDoc(doc(db, DEVICES_COLLECTION, deviceDoc.id), {
-        lastSeen: Date.now(),
-      });
+      await deviceDoc.ref.update({ lastSeen: Date.now() });
 
       return NextResponse.json({
         ok: true,
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       lastSeen: Date.now(),
     };
 
-    const docRef = await addDoc(collection(db, DEVICES_COLLECTION), newDevice);
+    const docRef = await adminDb.collection(DEVICES_COLLECTION).add(newDevice);
 
     return NextResponse.json({
       ok: true,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { FieldValue } from "firebase-admin/firestore";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
 
@@ -23,6 +23,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminDb = getAdminDb();
     const { id } = await params;
     const body = await request.json();
     const { sessions } = body;
@@ -31,18 +32,19 @@ export async function POST(
       return NextResponse.json({ ok: false, message: "Invalid session count" }, { status: 400 });
     }
 
-    const docRef = doc(db, DEVICES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
+    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const snapshot = await docRef.get();
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
     }
 
-    await updateDoc(docRef, {
-      remainingSessions: increment(sessions),
-    });
+    await docRef.update({
+      remainingSessions: FieldValue.increment(sessions),
+      lastSeen: Date.now(),
+    } as any);
 
-    const updatedSnapshot = await getDoc(docRef);
+    const updatedSnapshot = await docRef.get();
     const updatedData = updatedSnapshot.data();
 
     return NextResponse.json({

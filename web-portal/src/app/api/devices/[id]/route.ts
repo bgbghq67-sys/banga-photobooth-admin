@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
+
+export const runtime = "nodejs";
 
 // GET - Get single device
 export async function GET(
@@ -10,11 +11,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminDb = getAdminDb();
     const { id } = await params;
-    const docRef = doc(db, DEVICES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
+    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const snapshot = await docRef.get();
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
     }
 
@@ -34,14 +36,15 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminDb = getAdminDb();
     const { id } = await params;
     const body = await request.json();
     const { name, remainingSessions } = body;
 
-    const docRef = doc(db, DEVICES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
+    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const snapshot = await docRef.get();
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
     }
 
@@ -49,7 +52,7 @@ export async function PUT(
     if (name !== undefined) updates.name = name.trim();
     if (remainingSessions !== undefined) updates.remainingSessions = remainingSessions;
 
-    await updateDoc(docRef, updates);
+    await docRef.update(updates);
 
     return NextResponse.json({ ok: true, message: "Device updated" });
   } catch (error) {
@@ -64,15 +67,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const adminDb = getAdminDb();
     const { id } = await params;
-    const docRef = doc(db, DEVICES_COLLECTION, id);
-    const snapshot = await getDoc(docRef);
+    const docRef = adminDb.collection(DEVICES_COLLECTION).doc(id);
+    const snapshot = await docRef.get();
 
-    if (!snapshot.exists()) {
+    if (!snapshot.exists) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
     }
 
-    await deleteDoc(docRef);
+    await docRef.delete();
 
     return NextResponse.json({ ok: true, message: "Device deleted" });
   } catch (error) {

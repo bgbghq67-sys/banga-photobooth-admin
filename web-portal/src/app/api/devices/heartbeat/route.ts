@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, query, where, updateDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
+
+export const runtime = "nodejs";
 
 // POST - Heartbeat from device (update lastSeen and get session count)
 export async function POST(request: Request) {
   try {
+    const adminDb = getAdminDb();
     const body = await request.json();
     const { machineId } = body;
 
@@ -15,9 +17,11 @@ export async function POST(request: Request) {
     }
 
     // Find device by machine ID
-    const devicesRef = collection(db, DEVICES_COLLECTION);
-    const q = query(devicesRef, where("machineId", "==", machineId));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection(DEVICES_COLLECTION)
+      .where("machineId", "==", machineId)
+      .limit(1)
+      .get();
 
     if (snapshot.empty) {
       return NextResponse.json({ ok: false, message: "Device not found" }, { status: 404 });
@@ -27,9 +31,7 @@ export async function POST(request: Request) {
     const deviceData = deviceDoc.data();
 
     // Update last seen
-    await updateDoc(doc(db, DEVICES_COLLECTION, deviceDoc.id), {
-      lastSeen: Date.now(),
-    });
+    await deviceDoc.ref.update({ lastSeen: Date.now() });
 
     return NextResponse.json({
       ok: true,

@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, addDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 
 const DEVICES_COLLECTION = "devices";
+
+export const runtime = "nodejs";
 
 // GET - List all devices
 export async function GET() {
   try {
-    const devicesRef = collection(db, DEVICES_COLLECTION);
-    const snapshot = await getDocs(devicesRef);
-
-    const devices = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const adminDb = getAdminDb();
+    const snapshot = await adminDb.collection(DEVICES_COLLECTION).get();
+    const devices = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     // Sort client-side to avoid index requirement
     devices.sort((a, b) => ((b as any).createdAt || 0) - ((a as any).createdAt || 0));
@@ -28,6 +25,7 @@ export async function GET() {
 // POST - Create new device
 export async function POST(request: Request) {
   try {
+    const adminDb = getAdminDb();
     const body = await request.json();
     const { name, remainingSessions = 100 } = body;
 
@@ -44,7 +42,7 @@ export async function POST(request: Request) {
       lastSeen: null,
     };
 
-    const docRef = await addDoc(collection(db, DEVICES_COLLECTION), newDevice);
+    const docRef = await adminDb.collection(DEVICES_COLLECTION).add(newDevice);
 
     return NextResponse.json({
       ok: true,
