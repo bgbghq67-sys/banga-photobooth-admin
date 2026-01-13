@@ -4,5 +4,18 @@
 **/.env.local
 **/dist
 **/build
+.vs/
+bin/
+obj/
+Installer/Output/
+Installer/Output/**
+Demo/
+Website/
+*.tmp
+*.user
+*.suo
+*.db
+*.vsidx
+.orchids/
 .DS_Store
 
